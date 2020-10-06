@@ -3,16 +3,17 @@ package com.quran.labs.androidquran.util
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.VisibleForTesting
+import com.quran.data.core.QuranInfo
+import com.quran.data.model.SuraAyah
 import com.quran.labs.androidquran.R
 import com.quran.labs.androidquran.common.audio.QariItem
-import com.quran.labs.androidquran.data.QuranInfo
-import com.quran.labs.androidquran.data.SuraAyah
 import com.quran.labs.androidquran.service.AudioService
 import dagger.Reusable
 import timber.log.Timber
 import java.io.File
 import java.util.Locale
 import javax.inject.Inject
+import kotlin.Comparator
 
 @Reusable
 class AudioUtils @Inject
@@ -50,7 +51,7 @@ constructor(private val quranInfo: QuranInfo, private val quranFileUtils: QuranF
     for (i in shuyookh.indices) {
       if (hasGaplessEquivalent[i] == 0 || haveAnyFiles(context, paths[i])) {
         items += QariItem(
-            i, shuyookh[i], urls[i], paths[i], databases[i]
+          i, shuyookh[i], urls[i], paths[i], databases[i]
         )
       }
     }
@@ -81,10 +82,10 @@ constructor(private val quranInfo: QuranInfo, private val quranFileUtils: QuranF
     val rootDirectory = quranFileUtils.getQuranAudioDirectory(context)
     return if (rootDirectory == null) null else
       rootDirectory + item.path + File.separator + if (item.isGapless) {
-      "%03d" + AudioUtils.AUDIO_EXTENSION
-    } else {
-      "%d" + File.separator + "%d" + AudioUtils.AUDIO_EXTENSION
-    }
+        "%03d" + AudioUtils.AUDIO_EXTENSION
+      } else {
+        "%d" + File.separator + "%d" + AudioUtils.AUDIO_EXTENSION
+      }
   }
 
   fun getQariDatabasePathIfGapless(context: Context, item: QariItem): String? {
@@ -107,17 +108,23 @@ constructor(private val quranInfo: QuranInfo, private val quranFileUtils: QuranF
     return quranFileUtils.gaplessDatabaseRootUrl + "/" + dbName
   }
 
-  fun getLastAyahToPlay(startAyah: SuraAyah,
-                        currentPage: Int,
-                        mode: Int,
-                        isDualPages: Boolean): SuraAyah? {
-    val page = if (isDualPages && mode == LookAheadAmount.PAGE && currentPage % 2 == 1) {
-      // if we download page by page and we are currently in tablet mode
-      // and playing from the right page, get the left page as well.
-      currentPage + 1
-    } else {
-      currentPage
-    }
+  fun getLastAyahToPlay(
+    startAyah: SuraAyah,
+    currentPage: Int,
+    mode: Int,
+    isDualPageVisible: Boolean
+  ): SuraAyah? {
+    val page =
+      if (isDualPageVisible &&
+        mode == LookAheadAmount.PAGE &&
+        currentPage % 2 == 1
+      ) {
+        // if we download page by page and we are currently in tablet mode
+        // and playing from the right page, get the left page as well.
+        currentPage + 1
+      } else {
+        currentPage
+      }
 
     var pageLastSura = 114
     var pageLastAyah = 6
@@ -125,31 +132,13 @@ constructor(private val quranInfo: QuranInfo, private val quranFileUtils: QuranF
     if (page > totalPages || page < 0) {
       return null
     }
-    if (page < totalPages) {
-      val nextPage = page + 1
-      val nextPageSura = quranInfo.safelyGetSuraOnPage(nextPage)
-      // using [page+1] as an index because we literally want the next page
-      val nextPageAyah = quranInfo.getFirstAyahOnPage(nextPage)
 
-      pageLastSura = nextPageSura
-      pageLastAyah = nextPageAyah - 1
-      if (pageLastAyah < 1) {
-        pageLastSura--
-        pageLastAyah = quranInfo.getNumAyahs(pageLastSura)
-      }
-    }
 
     if (mode == LookAheadAmount.SURA) {
-      var sura = startAyah.sura
-      var lastAyah = quranInfo.getNumAyahs(sura)
+      val sura = startAyah.sura
+      val lastAyah = quranInfo.getNumberOfAyahs(sura)
       if (lastAyah == -1) {
         return null
-      }
-
-      // if we start playback between two suras, download both suras
-      if (pageLastSura > sura) {
-        sura = pageLastSura
-        lastAyah = quranInfo.getNumAyahs(sura)
       }
       return SuraAyah(sura, lastAyah)
     } else if (mode == LookAheadAmount.JUZ) {
@@ -168,16 +157,22 @@ constructor(private val quranInfo: QuranInfo, private val quranFileUtils: QuranF
 
         return SuraAyah(endJuz[0], endJuz[1])
       }
+    } else {
+      val range = quranInfo.getVerseRangeForPage(page)
+      pageLastSura = range.endingSura
+      pageLastAyah = range.endingAyah
     }
 
     // page mode (fallback also from errors above)
     return SuraAyah(pageLastSura, pageLastAyah)
   }
 
-  fun shouldDownloadBasmallah(baseDirectory: String,
-                              start: SuraAyah,
-                              end: SuraAyah,
-                              isGapless: Boolean) : Boolean {
+  fun shouldDownloadBasmallah(
+    baseDirectory: String,
+    start: SuraAyah,
+    end: SuraAyah,
+    isGapless: Boolean
+  ): Boolean {
     if (isGapless) {
       return false
     }
@@ -204,7 +199,11 @@ constructor(private val quranInfo: QuranInfo, private val quranFileUtils: QuranF
     Timber.d("seeing if need basmalla...")
 
     for (i in minAyah.sura..maxAyah.sura) {
-      val firstAyah: Int = if (i == minAyah.sura) { minAyah.ayah } else { 1 }
+      val firstAyah: Int = if (i == minAyah.sura) {
+        minAyah.ayah
+      } else {
+        1
+      }
       if (firstAyah == 1 && i != 1 && i != 9) {
         return true
       }
@@ -219,11 +218,13 @@ constructor(private val quranInfo: QuranInfo, private val quranFileUtils: QuranF
     return file.isDirectory && file.list()?.isNotEmpty() ?: false
   }
 
-  fun haveAllFiles(baseUrl: String,
-                   path: String,
-                   start: SuraAyah,
-                   end: SuraAyah,
-                   isGapless: Boolean): Boolean {
+  fun haveAllFiles(
+    baseUrl: String,
+    path: String,
+    start: SuraAyah,
+    end: SuraAyah,
+    isGapless: Boolean
+  ): Boolean {
     if (path.isEmpty()) {
       return false
     }
@@ -242,12 +243,21 @@ constructor(private val quranInfo: QuranInfo, private val quranFileUtils: QuranF
 
     if (endSura < startSura || endSura == startSura && endAyah < startAyah) {
       throw IllegalStateException(
-          "End isn't larger than the start: $startSura:$startAyah to $endSura:$endAyah")
+        "End isn't larger than the start: $startSura:$startAyah to $endSura:$endAyah"
+      )
     }
 
     for (i in startSura..endSura) {
-      val lastAyah = if (i == endSura) { endAyah } else { quranInfo.getNumAyahs(i) }
-      val firstAyah = if (i == startSura) { startAyah } else { 1 }
+      val lastAyah = if (i == endSura) {
+        endAyah
+      } else {
+        quranInfo.getNumberOfAyahs(i)
+      }
+      val firstAyah = if (i == startSura) {
+        startAyah
+      } else {
+        1
+      }
 
       if (isGapless) {
         if (i == endSura && endAyah == 0) {

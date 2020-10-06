@@ -89,11 +89,6 @@ public class QuranSettings {
     return prefs.getBoolean(Constants.PREF_DISPLAY_MARKER_POPUP, true);
   }
 
-  public boolean isImmersiveInPortrait() {
-    return prefs.getBoolean(Constants.PREF_IMMERSIVE_IN_PORTRAIT,
-        appContext.getResources().getBoolean(R.bool.immersive_in_portrait));
-  }
-
   public boolean shouldHighlightBookmarks() {
     return prefs.getBoolean(Constants.PREF_HIGHLIGHT_BOOKMARKS, true);
   }
@@ -161,10 +156,25 @@ public class QuranSettings {
     prefs.edit().putBoolean(Constants.PREF_SHOW_RECENTS, minimizeRecents).apply();
   }
 
-  public boolean getShowDate() { return prefs.getBoolean(Constants.PREF_SHOW_DATE, false);  }
+  public boolean getShowDate() {
+    return prefs.getBoolean(Constants.PREF_SHOW_DATE, false);
+  }
 
   public void setShowDate(boolean isDateShown) {
     prefs.edit().putBoolean(Constants.PREF_SHOW_DATE, isDateShown).apply();
+  }
+
+  public boolean isQuranSplitWithTranslation() {
+    return prefs.getBoolean(Constants.PREF_SPLIT_PAGE_AND_TRANSLATION, false);
+  }
+
+  public boolean isQuranOnRight() {
+    return prefs.getBoolean(Constants.PREF_QURAN_ON_RIGHT, true);
+  }
+
+  public boolean isShowSuraTranslatedName() {
+    return prefs.getBoolean(Constants.PREF_SURA_TRANSLATED_NAME,
+        appContext.getResources().getBoolean(R.bool.show_sura_names_translation));
   }
 
   // probably should eventually move this to Application.onCreate..
@@ -197,7 +207,7 @@ public class QuranSettings {
               .remove(QuranDownloadService.PREF_LAST_DOWNLOAD_ERROR)
               .remove(QuranDownloadService.PREF_LAST_DOWNLOAD_ITEM)
               .remove(Constants.PREF_ACTIVE_TRANSLATION)
-                  // these aren't migrated since they can be derived pretty easily
+              // these aren't migrated since they can be derived pretty easily
               .remove("didPresentPermissionsRationale") // was renamed, removing old one
               .remove(Constants.PREF_DEFAULT_IMAGES_DIR)
               .remove(Constants.PREF_HAVE_UPDATED_TRANSLATIONS)
@@ -318,7 +328,8 @@ public class QuranSettings {
   }
 
   public void setShouldFetchPages(boolean shouldFetchPages) {
-    perInstallationPrefs.edit().putBoolean(Constants.PREF_SHOULD_FETCH_PAGES, shouldFetchPages).apply();
+    perInstallationPrefs.edit().putBoolean(Constants.PREF_SHOULD_FETCH_PAGES, shouldFetchPages)
+        .apply();
   }
 
   public void removeShouldFetchPages() {

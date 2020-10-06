@@ -11,7 +11,6 @@ import android.database.MatrixCursor;
 import android.net.Uri;
 import android.provider.BaseColumns;
 
-import com.crashlytics.android.Crashlytics;
 import com.quran.labs.androidquran.BuildConfig;
 import com.quran.labs.androidquran.QuranApplication;
 import com.quran.labs.androidquran.R;
@@ -44,7 +43,7 @@ public class QuranDataProvider extends ContentProvider {
   private static final UriMatcher uriMatcher = buildUriMatcher();
 
   private boolean didInject;
-  @Inject QuranInfo quranInfo;
+  @Inject QuranDisplayData quranDisplayData;
   @Inject TranslationsDBAdapter translationsDBAdapter;
   @Inject QuranFileUtils quranFileUtils;
 
@@ -77,7 +76,7 @@ public class QuranDataProvider extends ContentProvider {
       }
     }
 
-    Crashlytics.log("uri: " + uri.toString());
+    Timber.d("uri: %s", uri.toString());
     switch (uriMatcher.match(uri)) {
       case SEARCH_SUGGEST: {
         if (selectionArgs == null) {
@@ -166,7 +165,7 @@ public class QuranDataProvider extends ContentProvider {
             int ayah = suggestions.getInt(2);
             String text = suggestions.getString(3);
             String foundText = context.getString(
-                R.string.found_in_sura, quranInfo.getSuraName(context, sura, false), ayah);
+                R.string.found_in_sura, quranDisplayData.getSuraName(context, sura, false), ayah);
 
             gotResults = true;
             MatrixCursor.RowBuilder row = mc.newRow();

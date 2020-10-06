@@ -12,16 +12,17 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.quran.data.core.QuranInfo;
 import com.quran.labs.androidquran.QuranApplication;
 import com.quran.labs.androidquran.R;
 import com.quran.labs.androidquran.data.Constants;
-import com.quran.labs.androidquran.data.QuranInfo;
+import com.quran.labs.androidquran.data.QuranDisplayData;
 import com.quran.labs.androidquran.ui.QuranActivity;
 import com.quran.labs.androidquran.ui.helpers.QuranListAdapter;
 import com.quran.labs.androidquran.ui.helpers.QuranRow;
 import com.quran.labs.androidquran.util.QuranSettings;
 import com.quran.labs.androidquran.util.QuranUtils;
-import com.quran.labs.androidquran.widgets.JuzView;
+import com.quran.labs.androidquran.view.JuzView;
 
 import javax.inject.Inject;
 
@@ -46,6 +47,7 @@ public class JuzListFragment extends Fragment {
   private Disposable disposable;
 
   @Inject QuranInfo quranInfo;
+  @Inject QuranDisplayData quranDisplayData;
 
   public static JuzListFragment newInstance() {
     return new JuzListFragment();
@@ -141,7 +143,7 @@ public class JuzListFragment extends Fragment {
       }
 
       final String metadata = getString(R.string.sura_ayah_notification_str, 
-          quranInfo.getSuraName(activity, pos[0], false), pos[1]);
+          quranDisplayData.getSuraName(activity, pos[0], false), pos[1]);
       final QuranRow.Builder builder = new QuranRow.Builder()
           .withText(quarters[i])
           .withMetadata(metadata)

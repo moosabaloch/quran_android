@@ -12,9 +12,6 @@ import android.text.TextUtils;
 import android.widget.Toast;
 
 import androidx.work.WorkManager;
-import com.crashlytics.android.Crashlytics;
-import com.crashlytics.android.answers.Answers;
-import com.crashlytics.android.answers.CustomEvent;
 import com.quran.data.source.PageProvider;
 import com.quran.labs.androidquran.presenter.data.QuranDataPresenter;
 import com.quran.labs.androidquran.service.QuranDownloadService;
@@ -23,6 +20,7 @@ import com.quran.labs.androidquran.service.util.PermissionUtil;
 import com.quran.labs.androidquran.service.util.QuranDownloadNotifier;
 import com.quran.labs.androidquran.service.util.ServiceIntentHelper;
 import com.quran.labs.androidquran.ui.QuranActivity;
+import com.quran.labs.androidquran.ui.util.ToastCompat;
 import com.quran.labs.androidquran.util.QuranFileUtils;
 import com.quran.labs.androidquran.util.QuranScreenInfo;
 import com.quran.labs.androidquran.util.QuranSettings;
@@ -130,7 +128,7 @@ public class QuranDataActivity extends Activity implements
             // etc), let's just drop it if it fails since this is expected to rarely occur.
             startService(reconnectIntent);
           } catch (IllegalStateException ise) {
-            Crashlytics.logException(ise);
+            Timber.e(ise);
           }
         });
 
@@ -177,7 +175,6 @@ public class QuranDataActivity extends Activity implements
     if (needsPermission && !PermissionUtil.haveWriteExternalStoragePermission(this)) {
       // request permission
       if (PermissionUtil.canRequestWriteExternalStoragePermission(this)) {
-        Answers.getInstance().logCustom(new CustomEvent("storagePermissionRationaleShown"));
         //show permission rationale dialog
         permissionsDialog = new AlertDialog.Builder(this)
             .setMessage(R.string.storage_permission_rationale)
@@ -186,8 +183,6 @@ public class QuranDataActivity extends Activity implements
               dialog.dismiss();
               permissionsDialog = null;
 
-              Answers.getInstance().logCustom(
-                  new CustomEvent("storagePermissionRationaleAccepted"));
               // request permissions
               requestExternalSdcardPermission();
             })
@@ -196,8 +191,6 @@ public class QuranDataActivity extends Activity implements
               dialog.dismiss();
               permissionsDialog = null;
 
-              Answers.getInstance().logCustom(
-                  new CustomEvent("storagePermissionRationaleDenied"));
               // fall back if we can
               if (fallbackFile != null) {
                 quranSettings.setAppCustomLocation(fallbackFile.getAbsolutePath());
@@ -256,14 +249,12 @@ public class QuranDataActivity extends Activity implements
          * http://stackoverflow.com/questions/32471888/
          */
         havePermission = true;
-        Answers.getInstance().logCustom(new CustomEvent("storagePermissionGranted"));
         if (!canWriteSdcardAfterPermissions()) {
-          Toast.makeText(this,
+          ToastCompat.makeText(this,
               R.string.storage_permission_please_restart, Toast.LENGTH_LONG).show();
         }
         checkPages();
       } else {
-        Answers.getInstance().logCustom(new CustomEvent("storagePermissionDenied"));
         final File fallbackFile = getExternalFilesDir(null);
         if (fallbackFile != null) {
           quranSettings.setAppCustomLocation(fallbackFile.getAbsolutePath());
@@ -365,7 +356,7 @@ public class QuranDataActivity extends Activity implements
         try {
           onPagesLost();
         } catch (Exception e) {
-          Crashlytics.logException(e);
+          Timber.e(e);
         }
         // clear the "pages downloaded" flag
         quranSettings.removeDidDownloadPages();
@@ -404,7 +395,7 @@ public class QuranDataActivity extends Activity implements
         quranSettings.setDownloadedPages(System.currentTimeMillis(), appLocation,
             quranDataStatus.getPortraitWidth() + "_" + quranDataStatus.getLandscapeWidth());
       } catch (IOException ioe) {
-        Crashlytics.logException(ioe);
+        Timber.e(ioe);
       }
 
       final String patchParam = quranDataStatus.getPatchParam();
@@ -446,7 +437,7 @@ public class QuranDataActivity extends Activity implements
         didHiddenFileSurvive =
             new File(baseDirectory, QURAN_HIDDEN_DIRECTORY_MARKER_FILE).exists();
       } catch (Exception e) {
-        Crashlytics.logException(e);
+        Timber.e(e);
       }
     }
 
@@ -458,7 +449,7 @@ public class QuranDataActivity extends Activity implements
         didNormalFileSurvive =
             new File(baseDirectory, QURAN_DIRECTORY_MARKER_FILE).exists();
       } catch (Exception e) {
-        Crashlytics.logException(e);
+        Timber.e(e);
       }
     }
 
@@ -469,7 +460,7 @@ public class QuranDataActivity extends Activity implements
         didInternalFileSurvive =
             new File(getNoBackupFilesDir(), QURAN_HIDDEN_DIRECTORY_MARKER_FILE).exists();
       } catch (Exception e) {
-        Crashlytics.logException(e);
+        Timber.e(e);
       }
     }
 
@@ -493,21 +484,6 @@ public class QuranDataActivity extends Activity implements
         recencyOfRemoval = "more than a day";
       }
     }
-
-    // log an event to Answers - this should help figure out why people are complaining that
-    // they are always prompted to re-download images, even after they did.
-    Answers.getInstance()
-        .logCustom(new CustomEvent("debugImagesDisappeared")
-            .putCustomAttribute("permissionGranted", havePermission ? "true" : "false")
-            .putCustomAttribute("storagePath", appLocation)
-            .putCustomAttribute("hasAndroidMatch", hasMatch ? "yes" : "no")
-            .putCustomAttribute("isPagePathTheSame", isPagePathTheSame ? "yes" : "no")
-            .putCustomAttribute("didNormalFileSurvive", didNormalFileSurvive ? "yes" : "no")
-            .putCustomAttribute("didHiddenFileSurvive", didHiddenFileSurvive ? "yes" : "no")
-            .putCustomAttribute("didInternalFileSurvive", didInternalFileSurvive ? "yes" : "no")
-            .putCustomAttribute("recencyOfRemoval", recencyOfRemoval)
-            .putCustomAttribute("arePagesToDownloadTheSame",
-                arePageSetsEquivalent ? "yes" : "no"));
 
     // log an exception
     Timber.w(quranDataStatus.toString());

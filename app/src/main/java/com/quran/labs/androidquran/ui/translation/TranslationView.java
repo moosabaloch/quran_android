@@ -7,18 +7,24 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.FrameLayout;
 
+import androidx.core.view.DisplayCutoutCompat;
+
 import com.quran.labs.androidquran.BuildConfig;
 import com.quran.labs.androidquran.R;
+import com.quran.labs.androidquran.common.LocalTranslationDisplaySort;
 import com.quran.labs.androidquran.common.LocalTranslation;
 import com.quran.labs.androidquran.common.QuranAyahInfo;
 import com.quran.labs.androidquran.common.TranslationMetadata;
-import com.quran.labs.androidquran.data.QuranInfo;
+import com.quran.labs.androidquran.data.QuranDisplayData;
 import com.quran.labs.androidquran.util.QuranSettings;
-import com.quran.labs.androidquran.widgets.AyahToolBar;
+import com.quran.labs.androidquran.view.AyahToolBar;
+
+import dev.chrisbanes.insetter.Insetter;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import androidx.annotation.NonNull;
@@ -36,7 +42,7 @@ public class TranslationView extends FrameLayout implements View.OnClickListener
   private QuranAyahInfo selectedAyah;
   private OnClickListener onClickListener;
   private OnTranslationActionListener onTranslationActionListener;
-  private LinearLayoutManager layoutManager;
+  private final LinearLayoutManager layoutManager;
 
   public TranslationView(Context context) {
     this(context, null);
@@ -78,9 +84,25 @@ public class TranslationView extends FrameLayout implements View.OnClickListener
       addView(ayahToolBar, LayoutParams.WRAP_CONTENT,
           context.getResources().getDimensionPixelSize(R.dimen.toolbar_total_height));
     }
+
+    Insetter.builder()
+        .setOnApplyInsetsListener((view, insets, initialState) -> {
+          final DisplayCutoutCompat cutout = insets.getDisplayCutout();
+          if (cutout != null) {
+            final int topSafeOffset = cutout.getSafeInsetTop();
+            final int bottomSafeOffset = cutout.getSafeInsetBottom();
+            final int horizontalSafeOffset =
+                Math.max(cutout.getSafeInsetLeft(), cutout.getSafeInsetRight());
+            setPadding(horizontalSafeOffset,
+                topSafeOffset,
+                horizontalSafeOffset,
+                bottomSafeOffset);
+          }
+        })
+        .applyToView(this);
   }
 
-  public void setVerses(@NonNull QuranInfo quranInfo,
+  public void setVerses(@NonNull QuranDisplayData quranDisplayData,
                         @NonNull LocalTranslation[] translations,
                         @NonNull List<QuranAyahInfo> verses) {
     this.translations = translations;
@@ -93,7 +115,7 @@ public class TranslationView extends FrameLayout implements View.OnClickListener
       int sura = verse.sura;
       if (sura != currentSura) {
         rows.add(new TranslationViewRow(TranslationViewRow.Type.SURA_HEADER, verse,
-            quranInfo.getSuraName(getContext(), sura, true)));
+            quranDisplayData.getSuraName(getContext(), sura, true)));
         currentSura = sura;
       }
 
@@ -107,22 +129,23 @@ public class TranslationView extends FrameLayout implements View.OnClickListener
         rows.add(new TranslationViewRow(TranslationViewRow.Type.QURAN_TEXT, verse));
       }
 
-      // added this to guard against a crash that happened when verse.texts was empty
-      int verseTexts = verse.texts.size();
-      for (int j = 0; j < translations.length; j++) {
-        final TranslationMetadata metadata = verseTexts > j ? verse.texts.get(j) : null;
+      final LocalTranslation[] sortedTranslations = Arrays.copyOf(this.translations, this.translations.length);
+      Arrays.sort(sortedTranslations, new LocalTranslationDisplaySort());
+
+      for (int j = 0; j < sortedTranslations.length; j++) {
+        final TranslationMetadata metadata = findText(verse.texts, sortedTranslations[j].getId());
         CharSequence text = metadata != null ? metadata.getText() : "";
         if (!TextUtils.isEmpty(text)) {
           if (wantTranslationHeaders) {
             rows.add(
                 new TranslationViewRow(TranslationViewRow.Type.TRANSLATOR,
                     verse,
-                    translations[j].getTranslatorName()));
+                    sortedTranslations[j].getTranslatorName()));
           }
           rows.add(new TranslationViewRow(
               TranslationViewRow.Type.TRANSLATION_TEXT, verse, text, j,
               metadata == null ? null : metadata.getLink(),
-              "ar".equals(translations[j].getLanguageCode())));
+              "ar".equals(sortedTranslations[j].getLanguageCode())));
         }
       }
 
@@ -177,6 +200,15 @@ public class TranslationView extends FrameLayout implements View.OnClickListener
     if (onClickListener != null) {
       onClickListener.onClick(v);
     }
+  }
+
+  private TranslationMetadata findText(List<TranslationMetadata> texts, Integer translationId) {
+    for (TranslationMetadata text : texts) {
+      if (translationId.equals(text.getLocalTranslationId())) {
+        return text;
+      }
+    }
+    return null;
   }
 
   /**

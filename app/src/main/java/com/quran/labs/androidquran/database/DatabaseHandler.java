@@ -9,14 +9,13 @@ import android.database.sqlite.SQLiteDatabaseCorruptException;
 import android.provider.BaseColumns;
 import android.util.SparseArray;
 
-import com.crashlytics.android.Crashlytics;
 import com.quran.common.search.ArabicSearcher;
 import com.quran.common.search.DefaultSearcher;
 import com.quran.common.search.Searcher;
 import com.quran.labs.androidquran.R;
 import com.quran.labs.androidquran.common.QuranText;
 import com.quran.labs.androidquran.data.QuranFileConstants;
-import com.quran.labs.androidquran.data.VerseRange;
+import com.quran.data.model.VerseRange;
 import com.quran.labs.androidquran.util.QuranFileUtils;
 import com.quran.labs.androidquran.util.TranslationUtil;
 
@@ -84,7 +83,7 @@ public class DatabaseHandler {
         databaseMap.remove(databaseName);
       }
     } catch (Exception e) {
-      Crashlytics.logException(e);
+      Timber.e(e);
     }
   }
 
@@ -104,16 +103,16 @@ public class DatabaseHandler {
     if (base == null) return;
 
     String path = base + File.separator + databaseName;
-    Crashlytics.log("opening database file: " + path);
+    Timber.d("opening database file: %s", path);
 
     try {
       database = SQLiteDatabase.openDatabase(path, null,
         SQLiteDatabase.NO_LOCALIZED_COLLATORS, new DefaultDatabaseErrorHandler());
     } catch (SQLiteDatabaseCorruptException sce) {
-      Crashlytics.log("corrupt database: " + databaseName);
+      Timber.d("corrupt database: %s", databaseName);
       throw sce;
     } catch (SQLException se){
-      Crashlytics.log("database file " + path +
+      Timber.d("database file " + path +
           (new File(path).exists()? " exists" : " doesn't exist"));
       throw se;
     }
@@ -360,13 +359,13 @@ public class DatabaseHandler {
         "rowid as " + BaseColumns._ID + ", " + COL_SURA + ", " + COL_AYAH, COL_TEXT) +
         " " + searcher.getLimit(withSnippets);
     searchText = searcher.processSearchText(searchText, useFullTextIndex);
-    Crashlytics.log("search query: " + qtext + ", query: " + searchText);
+    Timber.d("search query: " + qtext + ", query: " + searchText);
 
     final String[] columns = new String[] { BaseColumns._ID, COL_SURA, COL_AYAH, COL_TEXT };
     try {
       return searcher.runQuery(database, qtext, searchText, q, withSnippets, columns);
     } catch (Exception e) {
-      Crashlytics.logException(e);
+      Timber.e(e);
       return null;
     }
   }

@@ -15,6 +15,7 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.view.ActionMode
 import androidx.appcompat.view.ActionMode.Callback
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -23,16 +24,18 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.Adapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
+import com.quran.data.core.QuranInfo
 import com.quran.labs.androidquran.QuranApplication
 import com.quran.labs.androidquran.R
 import com.quran.labs.androidquran.common.audio.QariItem
-import com.quran.labs.androidquran.data.QuranInfo
-import com.quran.labs.androidquran.data.SuraAyah
+import com.quran.labs.androidquran.data.QuranDisplayData
+import com.quran.data.model.SuraAyah
 import com.quran.labs.androidquran.service.QuranDownloadService
 import com.quran.labs.androidquran.service.util.DefaultDownloadReceiver
 import com.quran.labs.androidquran.service.util.DefaultDownloadReceiver.SimpleDownloadListener
 import com.quran.labs.androidquran.service.util.QuranDownloadNotifier.ProgressIntent
 import com.quran.labs.androidquran.service.util.ServiceIntentHelper
+import com.quran.labs.androidquran.ui.util.ToastCompat
 import com.quran.labs.androidquran.util.AudioManagerUtils
 import com.quran.labs.androidquran.util.AudioUtils
 import com.quran.labs.androidquran.util.QariDownloadInfo
@@ -51,6 +54,9 @@ class SheikhAudioManagerActivity : QuranActionBarActivity(), SimpleDownloadListe
   lateinit var quranInfo: QuranInfo
 
   @Inject
+  lateinit var quranDisplayData: QuranDisplayData
+
+  @Inject
   lateinit var quranFileUtils: QuranFileUtils
 
   @Inject
@@ -64,6 +70,7 @@ class SheikhAudioManagerActivity : QuranActionBarActivity(), SimpleDownloadListe
   private var downloadReceiver: DefaultDownloadReceiver? = null
   private var basePath: String? = null
   private var actionMode: ActionMode? = null
+  private var dialogConfirm: AlertDialog? = null
 
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -130,6 +137,7 @@ class SheikhAudioManagerActivity : QuranActionBarActivity(), SimpleDownloadListe
 
   override fun onDestroy() {
     compositeDisposable.clear()
+    dialogConfirm?.dismiss()
     super.onDestroy()
   }
 
@@ -238,8 +246,18 @@ class SheikhAudioManagerActivity : QuranActionBarActivity(), SimpleDownloadListe
             val surah = position + 1
             val downloaded = info.downloadedSuras[surah]
             if (downloaded) {
-              // TODO: show a confirmation dialog before deleting
-              deleteSelection(ArrayList(listOf(surah)))
+              val surahName = quranDisplayData.getSuraName(this, surah, true)
+              val msg = String.format(getString(R.string.audio_manager_remove_audio_msg), surahName)
+              val builder = AlertDialog.Builder(this)
+              builder.setTitle(R.string.audio_manager_remove_audio_title)
+                  .setMessage(msg)
+                  .setPositiveButton(R.string.remove_button
+                  ) { _, _ ->
+                    deleteSelection(ArrayList(listOf(surah)))
+                  }
+                  .setNegativeButton(R.string.cancel
+                  ) { dialog, _ -> dialog.dismiss() }
+              dialogConfirm = builder.show()
             } else {
               download(surah, surah)
             }
@@ -256,7 +274,7 @@ class SheikhAudioManagerActivity : QuranActionBarActivity(), SimpleDownloadListe
       val audioFile = File(fileName)
       deletionSuccessful = audioFile.delete()
     } else {
-      val numAyahs = quranInfo.getNumAyahs(surah)
+      val numAyahs = quranInfo.getNumberOfAyahs(surah)
       for (i in 1..numAyahs) {
         val fileName = String.format(Locale.US, fileUri, surah, i)
         val ayahAudioFile = File(fileName)
@@ -288,7 +306,7 @@ class SheikhAudioManagerActivity : QuranActionBarActivity(), SimpleDownloadListe
           R.plurals.audio_manager_delete_surah_success, successCount, successCount
       )
     }
-    Toast.makeText(this, resultString, Toast.LENGTH_SHORT).show()
+    ToastCompat.makeText(this, resultString, Toast.LENGTH_SHORT).show()
     if (successCount > 0) {
       // refresh, if at least 1 file was deleted
       AudioManagerUtils.clearCacheKeyForSheikh(qari)
@@ -316,9 +334,11 @@ class SheikhAudioManagerActivity : QuranActionBarActivity(), SimpleDownloadListe
         baseUri, sheikhName, AUDIO_DOWNLOAD_KEY + qari.id + startSurah,
         QuranDownloadService.DOWNLOAD_TYPE_AUDIO
     )
-    intent.putExtra(QuranDownloadService.EXTRA_START_VERSE, SuraAyah(startSurah, 1))
+    intent.putExtra(QuranDownloadService.EXTRA_START_VERSE,
+        SuraAyah(startSurah, 1)
+    )
     intent.putExtra(QuranDownloadService.EXTRA_END_VERSE,
-        SuraAyah(endSurah, quranInfo.getNumAyahs(endSurah))
+        SuraAyah(endSurah, quranInfo.getNumberOfAyahs(endSurah))
     )
     intent.putExtra(QuranDownloadService.EXTRA_IS_GAPLESS, isGapless)
     startService(intent)
@@ -351,18 +371,22 @@ class SheikhAudioManagerActivity : QuranActionBarActivity(), SimpleDownloadListe
     }
 
     override fun onBindViewHolder(holder: SurahViewHolder, position: Int) {
-      holder.name.text = quranInfo.getSuraName(context, position + 1, true)
+      holder.name.text = quranDisplayData.getSuraName(context, position + 1, true)
       val surahStatus: Int
       val surahStatusImage: Int
+      val surahStatusBackground: Int
       if (isItemFullyDownloaded(position)) {
         surahStatus = R.string.audio_manager_surah_delete
         surahStatusImage = R.drawable.ic_cancel
+        surahStatusBackground = R.drawable.cancel_button_circle
       } else {
         surahStatus = R.string.audio_manager_surah_download
         surahStatusImage = R.drawable.ic_download
+        surahStatusBackground = R.drawable.download_button_circle
       }
       holder.status.text = getString(surahStatus)
       holder.image.setImageResource(surahStatusImage)
+      holder.image.setBackgroundResource(surahStatusBackground)
       holder.setChecked(isItemChecked(position))
     }
 

@@ -1,12 +1,14 @@
 package com.quran.labs.androidquran.presenter.translation
 
 import com.google.common.truth.Truth.assertThat
+import com.quran.data.core.QuranInfo
 import com.quran.data.page.provider.madani.MadaniPageProvider
 import com.quran.labs.androidquran.common.LocalTranslation
 import com.quran.labs.androidquran.common.QuranText
 import com.quran.labs.androidquran.common.TranslationMetadata
-import com.quran.labs.androidquran.data.QuranInfo
-import com.quran.labs.androidquran.data.VerseRange
+import com.quran.labs.androidquran.data.QuranDisplayData
+import com.quran.data.model.VerseRange
+import com.quran.data.pageinfo.common.MadaniDataSource
 import com.quran.labs.androidquran.database.TranslationsDBAdapter
 import com.quran.labs.androidquran.model.translation.TranslationModel
 import com.quran.labs.androidquran.presenter.Presenter
@@ -26,22 +28,27 @@ class BaseTranslationPresenterTest {
     presenter = BaseTranslationPresenter(
         Mockito.mock(TranslationModel::class.java),
         Mockito.mock(TranslationsDBAdapter::class.java),
-        object : TranslationUtil(0, QuranInfo(MadaniPageProvider())) {
-          override fun parseTranslationText(quranText: QuranText): TranslationMetadata {
-            return TranslationMetadata(quranText.sura, quranText.ayah, quranText.text)
+        object : TranslationUtil(0,
+            QuranInfo(
+                MadaniDataSource()
+            )
+        ) {
+          override fun parseTranslationText(quranText: QuranText, translationId: Int): TranslationMetadata {
+            return TranslationMetadata(quranText.sura, quranText.ayah, quranText.text, translationId)
           }
         },
-        QuranInfo(MadaniPageProvider()))
+        QuranInfo(MadaniDataSource())
+    )
   }
 
   @Test
   fun testGetTranslationNames() {
-    val databases = Arrays.asList("one.db", "two.db")
+    val databases = listOf("one.db", "two.db")
     val map = object : HashMap<String, LocalTranslation>() {
       init {
         put("one.db", LocalTranslation(1, "one.db", "One", "First", null, "", null, 1, 2))
         put("two.db", LocalTranslation(2, "two.db", "Two", "Second", null, "", null, 1, 2))
-        put("three.db", LocalTranslation(2, "three.db", "Three", "Third", null, "", null, 1, 2))
+        put("three.db", LocalTranslation(3, "three.db", "Three", "Third", null, "", null, 1, 2))
       }
     }
 
@@ -67,7 +74,8 @@ class BaseTranslationPresenterTest {
     val verseRange = VerseRange(1, 1, 1, 1, 1)
     val arabic = listOf(QuranText(1, 1, "first ayah"))
     val info = presenter.combineAyahData(verseRange, arabic,
-        listOf(listOf(QuranText(1, 1, "translation"))), emptyArray())
+        listOf(listOf(QuranText(1, 1, "translation"))),
+        arrayOf(LocalTranslation(1, "one.db", "One", "First", null, "", null, 1, 2)))
 
     assertThat(info).hasSize(1)
     val first = info[0]
@@ -76,6 +84,7 @@ class BaseTranslationPresenterTest {
     assertThat(first.texts).hasSize(1)
     assertThat(first.arabicText).isEqualTo("first ayah")
     assertThat(first.texts[0].text).isEqualTo("translation")
+    assertThat(first.texts[0].localTranslationId).isEqualTo(1)
   }
 
   @Test

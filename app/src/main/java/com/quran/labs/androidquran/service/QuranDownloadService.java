@@ -13,12 +13,9 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.StatFs;
 
-import com.crashlytics.android.Crashlytics;
-import com.crashlytics.android.answers.Answers;
-import com.crashlytics.android.answers.CustomEvent;
+import com.quran.data.core.QuranInfo;
 import com.quran.labs.androidquran.QuranApplication;
-import com.quran.labs.androidquran.data.QuranInfo;
-import com.quran.labs.androidquran.data.SuraAyah;
+import com.quran.data.model.SuraAyah;
 import com.quran.labs.androidquran.extension.CloseableExtensionKt;
 import com.quran.labs.androidquran.service.util.QuranDownloadNotifier;
 import com.quran.labs.androidquran.service.util.QuranDownloadNotifier.NotificationDetails;
@@ -29,8 +26,6 @@ import com.quran.labs.androidquran.util.ZipUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -291,8 +286,8 @@ public class QuranDownloadService extends Service implements
       notifier.resetNotifications();
 
       // get the start/end ayah info if it's a ranged download
-      SuraAyah startAyah = intent.getParcelableExtra(EXTRA_START_VERSE);
-      SuraAyah endAyah = intent.getParcelableExtra(EXTRA_END_VERSE);
+      SuraAyah startAyah = (SuraAyah) intent.getSerializableExtra(EXTRA_START_VERSE);
+      SuraAyah endAyah = (SuraAyah) intent.getSerializableExtra(EXTRA_END_VERSE);
       boolean isGapless = intent.getBooleanExtra(EXTRA_IS_GAPLESS, false);
 
       String outputFile = intent.getStringExtra(EXTRA_OUTPUT_FILE_NAME);
@@ -365,11 +360,11 @@ public class QuranDownloadService extends Service implements
       } else {
         // add the number ayahs from suras in between start and end
         for (int i = startSura + 1; i < endSura; i++) {
-          totalAyahs += quranInfo.getNumAyahs(i);
+          totalAyahs += quranInfo.getNumberOfAyahs(i);
         }
 
         // add the number of ayahs from the start sura
-        totalAyahs += quranInfo.getNumAyahs(startSura) - startAyah + 1;
+        totalAyahs += quranInfo.getNumberOfAyahs(startSura) - startAyah + 1;
 
         // add the number of ayahs from the last sura
         totalAyahs += endAyah;
@@ -390,7 +385,7 @@ public class QuranDownloadService extends Service implements
 
     boolean result;
     for (int i = startSura; i <= endSura; i++) {
-      int lastAyah = quranInfo.getNumAyahs(i);
+      int lastAyah = quranInfo.getNumberOfAyahs(i);
       if (i == endSura) {
         lastAyah = endAyah;
       }
@@ -491,9 +486,6 @@ public class QuranDownloadService extends Service implements
       }
 
       if (res == DOWNLOAD_SUCCESS) {
-        if (i > 0 && !url.contains("https://")) {
-          Answers.getInstance().logCustom(new CustomEvent("httpFallbackSuccess"));
-        }
         return true;
       } else if (res == QuranDownloadNotifier.ERROR_DISK_SPACE ||
           res == QuranDownloadNotifier.ERROR_PERMISSIONS) {
@@ -571,7 +563,7 @@ public class QuranDownloadService extends Service implements
       call = okHttpClient.newCall(request);
       final Response response = call.execute();
       if (response.isSuccessful()) {
-        Crashlytics.log("successful response: " + response.code() + " - " + downloadedAmount);
+        Timber.d("successful response: " + response.code() + " - " + downloadedAmount);
         final BufferedSink sink = Okio.buffer(Okio.appendingSink(partialFile));
         final ResponseBody body = response.body();
         source = body.source();
@@ -660,7 +652,7 @@ public class QuranDownloadService extends Service implements
 
       return availableSpace > spaceNeeded;
     } catch (Exception e) {
-      Crashlytics.logException(e);
+      Timber.e(e);
       return true;
     }
   }

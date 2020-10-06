@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.DialogInterface
 import android.os.Bundle
 import android.text.Editable
-import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -23,19 +22,23 @@ import android.widget.TextView
 import androidx.annotation.LayoutRes
 import androidx.appcompat.app.AlertDialog.Builder
 import androidx.fragment.app.DialogFragment
+import com.quran.data.core.QuranInfo
 import com.quran.labs.androidquran.QuranApplication
 import com.quran.labs.androidquran.R
 import com.quran.labs.androidquran.R.array
 import com.quran.labs.androidquran.R.layout
 import com.quran.labs.androidquran.R.string
-import com.quran.labs.androidquran.data.QuranInfo
 import com.quran.labs.androidquran.ui.helpers.JumpDestination
 import com.quran.labs.androidquran.util.QuranUtils
-import com.quran.labs.androidquran.widgets.ForceCompleteTextView
+import com.quran.labs.androidquran.view.ForceCompleteTextView
 import timber.log.Timber
 import java.util.Locale
 import javax.inject.Inject
 
+/**
+ * [DialogFragment] of a dialog for quickly selecting and jumping to a particular location in the
+ * Quran. A location can be selected by page number or Surah/Ayah.
+ */
 class JumpFragment : DialogFragment() {
 
   @Inject
@@ -144,7 +147,7 @@ class JumpFragment : DialogFragment() {
           val suraTag = suraInput.tag
           if (suraTag != null) {
             val sura = suraTag as Int
-            val ayahCount = quranInfo.getNumAyahs(sura)
+            val ayahCount = quranInfo.getNumberOfAyahs(sura)
             // ensure in 1..ayahCount
             ayah = ayah.coerceIn(1..ayahCount)
             val page = quranInfo.getPageFromSuraAyah(sura, ayah)

@@ -4,10 +4,8 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
-import com.crashlytics.android.answers.Answers
-import com.crashlytics.android.answers.CustomEvent
+import com.quran.data.core.QuranInfo
 import com.quran.labs.androidquran.core.worker.WorkerTaskFactory
-import com.quran.labs.androidquran.data.QuranInfo
 import com.quran.labs.androidquran.util.QuranFileUtils
 import com.quran.labs.androidquran.util.QuranScreenInfo
 import kotlinx.coroutines.Dispatchers
@@ -45,21 +43,8 @@ class MissingPageDownloadWorker(private val context: Context,
       val failures = results.count { !it }
       if (failures > 0) {
         Timber.d("MissingPageWorker failed with $failures from ${pagesToDownload.size}")
-        Answers.getInstance()
-            .logCustom(
-                CustomEvent("missingPageWorkerFailure")
-                    .putCustomAttribute("failed", failures)
-                    .putCustomAttribute("percentageSuccess",
-                        1.0 * (pagesToDownload.size - failures) / pagesToDownload.size * 1.0)
-                    .putCustomAttribute("missingImages", pagesToDownload.size)
-            )
       } else {
         Timber.d("MissingPageWorker success with ${pagesToDownload.size}")
-        Answers.getInstance()
-          .logCustom(
-              CustomEvent("missingPageWorkerSuccess")
-                  .putCustomAttribute("missingImages", pagesToDownload.size)
-          )
       }
     }
     Result.success()

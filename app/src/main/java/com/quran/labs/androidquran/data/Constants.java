@@ -1,5 +1,7 @@
 package com.quran.labs.androidquran.data;
 
+import com.quran.data.core.QuranConstants;
+
 public class Constants {
 
   // data domain
@@ -16,13 +18,13 @@ public class Constants {
   public static final int MIN_TRANSLATION_REFRESH_TIME = 60 * 60 * 1000;
 
   // Pages
-  public static final int PAGES_FIRST = 1;
-  public static final int SURA_FIRST = 1;
-  public static final int SURA_LAST = 114;
-  public static final int SURAS_COUNT = 114;
-  public static final int JUZ2_COUNT = 30;
-  public static final int AYA_MIN = 1;
-  public static final int AYA_MAX = 286;
+  public static final int PAGES_FIRST = QuranConstants.PAGES_FIRST;
+  public static final int SURA_FIRST = QuranConstants.FIRST_SURA;
+  public static final int SURA_LAST = QuranConstants.LAST_SURA;
+  public static final int SURAS_COUNT = QuranConstants.NUMBER_OF_SURAS;
+  public static final int JUZ2_COUNT = QuranConstants.JUZ2_COUNT;
+  public static final int AYA_MIN = QuranConstants.MIN_AYAH;
+  public static final int AYA_MAX = QuranConstants.MAX_AYAH;
   public static final int NO_PAGE = -1;
   public static final int MAX_RECENT_PAGES = 3;
 
@@ -60,10 +62,13 @@ public class Constants {
   public static final String PREF_SHOULD_FETCH_PAGES = "shouldFetchPages";
   public static final String PREF_OVERLAY_PAGE_INFO = "overlayPageInfo";
   public static final String PREF_DISPLAY_MARKER_POPUP = "displayMarkerPopup";
-  public static final String PREF_IMMERSIVE_IN_PORTRAIT = "immersiveInPortrait";
   public static final String PREF_HIGHLIGHT_BOOKMARKS = "highlightBookmarks";
   public static final String PREF_AYAH_BEFORE_TRANSLATION =
       "ayahBeforeTranslation";
+  public static final String PREF_SPLIT_PAGE_AND_TRANSLATION =
+      "splitPageAndTranslation";
+  public static final String PREF_QURAN_ON_RIGHT =
+      "quranOnRight";
   public static final String PREF_PREFER_STREAMING = "preferStreaming";
   public static final String PREF_DOWNLOAD_AMOUNT = "preferredDownloadAmount";
   public static final String PREF_LAST_UPDATED_TRANSLATIONS =
@@ -96,4 +101,5 @@ public class Constants {
   public static final String PREF_READING_CATEGORY = "readingCategoryKey";
   public static final String PREF_CHECKED_PARTIAL_IMAGES = "didCheckPartialImages";
   public static final String PREF_CURRENT_AUDIO_REVISION = "currentAudioRevision";
+  public static final String PREF_SURA_TRANSLATED_NAME = "suraTranslatedName";
 }
